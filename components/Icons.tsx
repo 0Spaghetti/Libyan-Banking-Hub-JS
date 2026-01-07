@@ -21,7 +21,8 @@ import {
   Loader2,
   X,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Heart
 } from 'lucide-react';
 
 export const IconBank = ({ className }: { className?: string }) => <Building2 className={className} />;
@@ -46,3 +47,4 @@ export const IconLoader = ({ className }: { className?: string }) => <Loader2 cl
 export const IconClose = ({ className }: { className?: string }) => <X className={className} />;
 export const IconChevronDown = ({ className }: { className?: string }) => <ChevronDown className={className} />;
 export const IconChevronUp = ({ className }: { className?: string }) => <ChevronUp className={className} />;
+export const IconHeart = ({ className, filled }: { className?: string; filled?: boolean }) => <Heart className={className} fill={filled ? "currentColor" : "none"} />;

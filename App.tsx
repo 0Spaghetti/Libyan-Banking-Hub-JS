@@ -6,7 +6,7 @@ import BranchMap, { MiniBranchMap } from './components/BranchMap';
 import Toast from './components/Toast';
 import { 
   IconBank, IconMapPin, IconSearch, IconBack, 
-  IconRefresh, IconSparkles, IconNav, IconSun, IconMoon, IconFilter, IconPlus, IconLoader, IconClose, IconChevronDown, IconChevronUp
+  IconRefresh, IconSparkles, IconNav, IconSun, IconMoon, IconFilter, IconPlus, IconLoader, IconClose, IconChevronDown, IconChevronUp, IconHeart
 } from './components/Icons';
 import { analyzeLiquidity } from './services/geminiService';
 
@@ -38,14 +38,14 @@ const Header = ({ title, showBack, onBack, onViewMap, onAddData, currentView, is
            <>
              <button 
                onClick={onAddData}
-               className="p-2 rounded-full bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/30 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+               className="p-2 rounded-full bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/30 hover:text-primary-600 dark:hover:text-primary-400 transition-colors hidden md:block"
                title="إضافة بيانات (مسؤول)"
              >
                <IconPlus className="w-6 h-6" />
              </button>
              <button 
                onClick={() => onViewMap(currentView === 'MAP' ? 'HOME' : 'MAP')} 
-               className="p-2 rounded-full bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/30 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+               className="p-2 rounded-full bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/30 hover:text-primary-600 dark:hover:text-primary-400 transition-colors hidden md:block"
              >
                {currentView === 'MAP' ? <IconBank className="w-6 h-6" /> : <IconMapPin className="w-6 h-6" />}
              </button>
@@ -381,10 +381,12 @@ const App: React.FC = () => {
   const [view, setView] = useState<ViewState>('SPLASH');
   const [selectedBank, setSelectedBank] = useState<Bank | null>(null);
   
-  // Search State
+  // Search & Favorites State
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [favoriteBanks, setFavoriteBanks] = useState<Set<string>>(new Set());
+  const [homeTab, setHomeTab] = useState<'ALL' | 'FAVORITES'>('ALL');
   
   // State for data
   const [banks, setBanks] = useState<Bank[]>(BANKS);
@@ -452,6 +454,19 @@ const App: React.FC = () => {
     }
   };
 
+  const toggleFavorite = (e: React.MouseEvent, bankId: string) => {
+    e.stopPropagation();
+    setFavoriteBanks(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(bankId)) {
+        newSet.delete(bankId);
+      } else {
+        newSet.add(bankId);
+      }
+      return newSet;
+    });
+  };
+
   const submitReport = (branchId: string, status: LiquidityStatus) => {
     setBranches(prev => prev.map(b => 
       b.id === branchId ? { ...b, status, lastUpdate: new Date(), crowdLevel: status === LiquidityStatus.CROWDED ? 90 : status === LiquidityStatus.EMPTY ? 0 : 40 } : b
@@ -484,10 +499,15 @@ const App: React.FC = () => {
   };
 
   const filteredBanks = banks.filter(bank => {
+    // 1. Tab Filter
+    if (homeTab === 'FAVORITES' && !favoriteBanks.has(bank.id)) {
+      return false;
+    }
+
+    // 2. Search Filter
     let matchesSearch = true;
     const term = debouncedSearchTerm.trim().toLowerCase();
     
-    // Search Filter
     if (term) {
        // Check bank details
        const nameMatch = bank.name.toLowerCase().includes(term) || bank.city.toLowerCase().includes(term);
@@ -500,14 +520,16 @@ const App: React.FC = () => {
        matchesSearch = nameMatch || branchMatch;
     }
 
-    // Availability Filter
+    if (!matchesSearch) return false;
+
+    // 3. Availability Filter
     if (showAvailableOnly) {
       const bankBranches = branches.filter(b => b.bankId === bank.id);
       const hasAvailableBranch = bankBranches.some(b => b.status === LiquidityStatus.AVAILABLE);
       if (!hasAvailableBranch) return false;
     }
 
-    return matchesSearch;
+    return true;
   });
   
   const currentBranches = selectedBank ? branches.filter(b => b.bankId === selectedBank.id) : [];
@@ -528,10 +550,34 @@ const App: React.FC = () => {
         toggleTheme={toggleTheme}
       />
 
-      <main className="flex-1 max-w-4xl mx-auto w-full p-4">
+      <main className="flex-1 max-w-4xl mx-auto w-full p-4 pb-24 md:pb-4">
         
         {view === 'HOME' && (
           <>
+            {/* Tabs */}
+            <div className="flex p-1 bg-gray-200 dark:bg-gray-700 rounded-xl mb-6">
+              <button
+                onClick={() => setHomeTab('ALL')}
+                className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${
+                  homeTab === 'ALL' 
+                    ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm' 
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                }`}
+              >
+                جميع المصارف
+              </button>
+              <button
+                onClick={() => setHomeTab('FAVORITES')}
+                className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${
+                  homeTab === 'FAVORITES' 
+                    ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm' 
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                }`}
+              >
+                المفضلة
+              </button>
+            </div>
+
             <div className="flex gap-2 mb-6">
               <div className="relative flex-1 group">
                 {isSearching ? (
@@ -576,8 +622,20 @@ const App: React.FC = () => {
                   <button 
                     key={bank.id}
                     onClick={() => handleBankSelect(bank)}
-                    className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all border border-gray-100 dark:border-gray-700 flex flex-col items-center text-center gap-4 group"
+                    className="relative bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all border border-gray-100 dark:border-gray-700 flex flex-col items-center text-center gap-4 group"
                   >
+                    {/* Favorite Toggle Button */}
+                    <div 
+                      onClick={(e) => toggleFavorite(e, bank.id)}
+                      className="absolute top-3 left-3 p-2 rounded-full bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-400 hover:text-red-500 transition-colors z-10"
+                      title={favoriteBanks.has(bank.id) ? "إزالة من المفضلة" : "إضافة للمفضلة"}
+                    >
+                      <IconHeart 
+                        className={`w-5 h-5 transition-all ${favoriteBanks.has(bank.id) ? 'text-red-500' : ''}`} 
+                        filled={favoriteBanks.has(bank.id)}
+                      />
+                    </div>
+
                     <div className="w-16 h-16 rounded-full bg-gray-50 dark:bg-gray-700 overflow-hidden flex items-center justify-center border dark:border-gray-600 group-hover:border-primary-200 dark:group-hover:border-primary-500/50 transition-colors">
                       <img src={bank.logoUrl} alt={bank.name} className="w-full h-full object-cover opacity-90 hover:opacity-100" />
                     </div>
@@ -590,9 +648,19 @@ const App: React.FC = () => {
               </div>
             ) : (
               <div className="text-center py-20 opacity-60">
-                <IconBank className="w-16 h-16 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
-                <p className="text-gray-500 dark:text-gray-400 text-lg">لا توجد مصارف تطابق بحثك</p>
-                {showAvailableOnly && <p className="text-gray-400 dark:text-gray-500 text-sm mt-2">جرب إلغاء تصفية "سيولة متوفرة"</p>}
+                {homeTab === 'FAVORITES' ? (
+                  <>
+                    <IconHeart className="w-16 h-16 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
+                    <p className="text-gray-500 dark:text-gray-400 text-lg">قائمة المفضلة فارغة</p>
+                    <p className="text-gray-400 dark:text-gray-500 text-sm mt-2">اضغط على رمز القلب لإضافة مصارفك المفضلة هنا</p>
+                  </>
+                ) : (
+                  <>
+                    <IconBank className="w-16 h-16 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
+                    <p className="text-gray-500 dark:text-gray-400 text-lg">لا توجد مصارف تطابق بحثك</p>
+                    {showAvailableOnly && <p className="text-gray-400 dark:text-gray-500 text-sm mt-2">جرب إلغاء تصفية "سيولة متوفرة"</p>}
+                  </>
+                )}
               </div>
             )}
           </>
@@ -721,19 +789,48 @@ const App: React.FC = () => {
         />
       )}
 
-      {/* Mobile Nav Placeholder (Optional enhancement) */}
-      <div className="sticky bottom-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-3 flex justify-around text-xs font-medium text-gray-400 dark:text-gray-500 md:hidden z-40 transition-colors">
-        <button onClick={() => setView('HOME')} className={`flex flex-col items-center gap-1 ${view === 'HOME' ? 'text-primary-600 dark:text-primary-400' : ''}`}>
-          <IconBank className="w-6 h-6" />
-          <span>المصارف</span>
+      {/* Mobile Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-gray-800/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 pb-safe pt-2 px-6 flex justify-between items-center md:hidden z-50 transition-all duration-300 shadow-[0_-5px_20px_-5px_rgba(0,0,0,0.1)]">
+        <button 
+          onClick={() => { setView('HOME'); setSelectedBank(null); }} 
+          className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all duration-300 ${
+            view === 'HOME' || view === 'BANK_DETAILS'
+              ? 'text-primary-600 dark:text-primary-400 -translate-y-2' 
+              : 'text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+          }`}
+        >
+          <div className={`p-1.5 rounded-full transition-all ${view === 'HOME' || view === 'BANK_DETAILS' ? 'bg-primary-50 dark:bg-primary-900/30 ring-4 ring-white dark:ring-gray-800 shadow-sm' : ''}`}>
+            <IconBank className={`w-6 h-6 transition-transform ${view === 'HOME' || view === 'BANK_DETAILS' ? 'scale-110' : ''}`} />
+          </div>
+          <span className="text-[10px] font-bold">المصارف</span>
         </button>
-        <button onClick={() => setView('MAP')} className={`flex flex-col items-center gap-1 ${view === 'MAP' ? 'text-primary-600 dark:text-primary-400' : ''}`}>
-          <IconNav className="w-6 h-6" />
-          <span>الخريطة</span>
+
+        <button 
+          onClick={() => setView('MAP')} 
+          className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all duration-300 ${
+            view === 'MAP'
+              ? 'text-primary-600 dark:text-primary-400 -translate-y-2' 
+              : 'text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+          }`}
+        >
+          <div className={`p-1.5 rounded-full transition-all ${view === 'MAP' ? 'bg-primary-50 dark:bg-primary-900/30 ring-4 ring-white dark:ring-gray-800 shadow-sm' : ''}`}>
+            <IconMapPin className={`w-6 h-6 transition-transform ${view === 'MAP' ? 'scale-110' : ''}`} />
+          </div>
+          <span className="text-[10px] font-bold">الخريطة</span>
         </button>
-        <button onClick={() => setView('ADD_DATA')} className={`flex flex-col items-center gap-1 ${view === 'ADD_DATA' ? 'text-primary-600 dark:text-primary-400' : ''}`}>
-          <IconPlus className="w-6 h-6" />
-          <span>إضافة</span>
+
+        <button 
+          onClick={() => setView('ADD_DATA')} 
+          className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all duration-300 ${
+            view === 'ADD_DATA' 
+              ? 'text-primary-600 dark:text-primary-400 -translate-y-2' 
+              : 'text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+          }`}
+        >
+          <div className={`p-1.5 rounded-full transition-all ${view === 'ADD_DATA' ? 'bg-primary-50 dark:bg-primary-900/30 ring-4 ring-white dark:ring-gray-800 shadow-sm' : ''}`}>
+            <IconPlus className={`w-6 h-6 transition-transform ${view === 'ADD_DATA' ? 'scale-110' : ''}`} />
+          </div>
+          <span className="text-[10px] font-bold">إضافة</span>
         </button>
       </div>
     </div>
