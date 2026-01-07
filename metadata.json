@@ -1,0 +1,7 @@
+{
+  "name": "Libyan Banking Hub (دليلي المصرفي)",
+  "description": "A comprehensive directory for Libyan banks helping users track and report cash liquidity in branches and ATMs via crowdsourcing and AI analysis.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
