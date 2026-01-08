@@ -1,60 +1,120 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Bank, Branch, LiquidityStatus, ViewState, Report } from './types';
+import React, { useState, useEffect } from 'react';
+import { Bank, Branch, LiquidityStatus, ViewState } from './types';
 import { BANKS, MOCK_BRANCHES } from './constants';
 import StatusBadge from './components/StatusBadge';
 import BranchMap, { MiniBranchMap } from './components/BranchMap';
 import Toast from './components/Toast';
 import { 
   IconBank, IconMapPin, IconSearch, IconBack, 
-  IconRefresh, IconSparkles, IconNav, IconSun, IconMoon, IconFilter, IconPlus, IconLoader, IconClose, IconChevronDown, IconChevronUp, IconHeart
+  IconRefresh, IconSparkles, IconSun, IconMoon, IconFilter, IconPlus, IconLoader, IconClose, IconChevronDown, IconChevronUp, IconHeart
 } from './components/Icons';
 import { analyzeLiquidity } from './services/geminiService';
 
 // --- Sub-components for better organization ---
 
-const Header = ({ title, showBack, onBack, onViewMap, onAddData, currentView, isDark, toggleTheme }: any) => (
-  <header className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-50 border-b border-gray-100 dark:border-gray-700 transition-colors">
-    <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        {showBack && (
-          <button onClick={onBack} className="p-2 -mr-2 rounded-full hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors">
-            {/* Rotate icon 180 degrees for RTL direction */}
-            <IconBack className="w-6 h-6 rotate-180" />
-          </button>
-        )}
-        <h1 className="text-xl font-bold text-primary-800 dark:text-primary-400 tracking-tight">{title}</h1>
-      </div>
-      
-      <div className="flex items-center gap-2">
-        <button 
-          onClick={toggleTheme}
-          className="p-2 rounded-full bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
-          title={isDark ? "تفعيل الوضع النهاري" : "تفعيل الوضع الليلي"}
-        >
-          {isDark ? <IconSun className="w-5 h-5" /> : <IconMoon className="w-5 h-5" />}
-        </button>
+interface HeaderProps {
+  title: string;
+  showBack: boolean;
+  onBack: () => void;
+  onViewMap: (view: ViewState) => void;
+  onAddData: () => void;
+  currentView: ViewState;
+  isDark: boolean;
+  toggleTheme: () => void;
+}
 
-        {currentView !== 'AUTH' && currentView !== 'SPLASH' && (
-           <>
-             <button 
-               onClick={onAddData}
-               className="p-2 rounded-full bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/30 hover:text-primary-600 dark:hover:text-primary-400 transition-colors hidden md:block"
-               title="إضافة بيانات (مسؤول)"
-             >
-               <IconPlus className="w-6 h-6" />
-             </button>
-             <button 
-               onClick={() => onViewMap(currentView === 'MAP' ? 'HOME' : 'MAP')} 
-               className="p-2 rounded-full bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/30 hover:text-primary-600 dark:hover:text-primary-400 transition-colors hidden md:block"
-             >
-               {currentView === 'MAP' ? <IconBank className="w-6 h-6" /> : <IconMapPin className="w-6 h-6" />}
-             </button>
-           </>
-        )}
+const Header = ({ title, showBack, onBack, onViewMap, onAddData, currentView, isDark, toggleTheme }: HeaderProps) => {
+  return (
+    <header className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-50 border-b border-gray-100 dark:border-gray-700 transition-colors">
+      <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          {showBack && (
+            <button onClick={onBack} className="p-2 -mr-2 rounded-full hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors">
+              <IconBack className="w-6 h-6 rotate-180" />
+            </button>
+          )}
+          <h1 className="text-xl font-bold text-primary-800 dark:text-primary-400 tracking-tight">{title}</h1>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={toggleTheme}
+            className="p-2 rounded-full bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+            title={isDark ? "تفعيل الوضع النهاري" : "تفعيل الوضع الليلي"}
+          >
+            {isDark ? <IconSun className="w-5 h-5" /> : <IconMoon className="w-5 h-5" />}
+          </button>
+
+          {currentView !== 'AUTH' && currentView !== 'SPLASH' && (
+             <>
+               <button 
+                 onClick={onAddData}
+                 className="p-2 rounded-full bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/30 hover:text-primary-600 dark:hover:text-primary-400 transition-colors hidden md:block"
+                 title="إضافة بيانات (مسؤول)"
+               >
+                 <IconPlus className="w-6 h-6" />
+               </button>
+               <button 
+                 onClick={() => onViewMap(currentView === 'MAP' ? 'HOME' : 'MAP')} 
+                 className="p-2 rounded-full bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/30 hover:text-primary-600 dark:hover:text-primary-400 transition-colors hidden md:block"
+               >
+                 {currentView === 'MAP' ? <IconBank className="w-6 h-6" /> : <IconMapPin className="w-6 h-6" />}
+               </button>
+             </>
+          )}
+        </div>
       </div>
+    </header>
+  );
+};
+
+const BottomNav = ({ view, setView, onResetSelection }: { view: ViewState, setView: (v: ViewState) => void, onResetSelection: () => void }) => {
+  return (
+    <div className="fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-gray-800/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 pb-6 pt-2 px-6 flex justify-between items-center md:hidden z-[60] transition-all duration-300 shadow-[0_-5px_20px_-5px_rgba(0,0,0,0.1)]">
+      <button 
+        onClick={() => { setView('HOME'); onResetSelection(); }} 
+        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all duration-300 ${
+          view === 'HOME' || view === 'BANK_DETAILS'
+            ? 'text-primary-600 dark:text-primary-400 -translate-y-2' 
+            : 'text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+        }`}
+      >
+        <div className={`p-1.5 rounded-full transition-all ${view === 'HOME' || view === 'BANK_DETAILS' ? 'bg-primary-50 dark:bg-primary-900/30 ring-4 ring-white dark:ring-gray-800 shadow-sm' : ''}`}>
+          <IconBank className={`w-6 h-6 transition-transform ${view === 'HOME' || view === 'BANK_DETAILS' ? 'scale-110' : ''}`} />
+        </div>
+        <span className="text-[10px] font-bold">المصارف</span>
+      </button>
+
+      <button 
+        onClick={() => setView('MAP')} 
+        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all duration-300 ${
+          view === 'MAP'
+            ? 'text-primary-600 dark:text-primary-400 -translate-y-2' 
+            : 'text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+        }`}
+      >
+        <div className={`p-1.5 rounded-full transition-all ${view === 'MAP' ? 'bg-primary-50 dark:bg-primary-900/30 ring-4 ring-white dark:ring-gray-800 shadow-sm' : ''}`}>
+          <IconMapPin className={`w-6 h-6 transition-transform ${view === 'MAP' ? 'scale-110' : ''}`} />
+        </div>
+        <span className="text-[10px] font-bold">الخريطة</span>
+      </button>
+
+      <button 
+        onClick={() => setView('ADD_DATA')} 
+        className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all duration-300 ${
+          view === 'ADD_DATA' 
+            ? 'text-primary-600 dark:text-primary-400 -translate-y-2' 
+            : 'text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+        }`}
+      >
+        <div className={`p-1.5 rounded-full transition-all ${view === 'ADD_DATA' ? 'bg-primary-50 dark:bg-primary-900/30 ring-4 ring-white dark:ring-gray-800 shadow-sm' : ''}`}>
+          <IconPlus className={`w-6 h-6 transition-transform ${view === 'ADD_DATA' ? 'scale-110' : ''}`} />
+        </div>
+        <span className="text-[10px] font-bold">إضافة</span>
+      </button>
     </div>
-  </header>
-);
+  );
+};
 
 const SplashScreen = ({ onComplete }: { onComplete: () => void }) => {
   useEffect(() => {
@@ -73,50 +133,52 @@ const SplashScreen = ({ onComplete }: { onComplete: () => void }) => {
   );
 };
 
-const AuthScreen = ({ onLogin, onGuest }: any) => (
-  <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center p-6 transition-colors">
-    <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-100 dark:border-gray-700">
-      <div className="text-center mb-8">
-        <div className="inline-block p-4 rounded-full bg-primary-100 dark:bg-primary-900/30 mb-4">
-          <IconBank className="w-10 h-10 text-primary-600 dark:text-primary-400" />
-        </div>
-        <h2 className="text-2xl font-bold text-gray-800 dark:text-white">تسجيل الدخول</h2>
-        <p className="text-gray-500 dark:text-gray-400 mt-2">قم بتسجيل الدخول للإبلاغ عن حالة السيولة</p>
-      </div>
-      
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">البريد الإلكتروني</label>
-          <input type="email" className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none text-left" dir="ltr" placeholder="user@example.com" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">كلمة المرور</label>
-          <input type="password" className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none text-left" dir="ltr" placeholder="••••••••" />
+const AuthScreen = ({ onLogin, onGuest }: { onLogin: () => void; onGuest: () => void }) => {
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center p-6 transition-colors">
+      <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-100 dark:border-gray-700">
+        <div className="text-center mb-8">
+          <div className="inline-block p-4 rounded-full bg-primary-100 dark:bg-primary-900/30 mb-4">
+            <IconBank className="w-10 h-10 text-primary-600 dark:text-primary-400" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-white">تسجيل الدخول</h2>
+          <p className="text-gray-500 dark:text-gray-400 mt-2">قم بتسجيل الدخول للإبلاغ عن حالة السيولة</p>
         </div>
         
-        <button onClick={onLogin} className="w-full bg-primary-600 text-white py-3 rounded-lg font-bold hover:bg-primary-700 transition-colors shadow-lg shadow-primary-500/30">
-          دخول
-        </button>
-        
-        <div className="relative py-4">
-          <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200 dark:border-gray-700"></div></div>
-          <div className="relative flex justify-center text-sm"><span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">أو</span></div>
-        </div>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">البريد الإلكتروني</label>
+            <input type="email" className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none text-left" dir="ltr" placeholder="user@example.com" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">كلمة المرور</label>
+            <input type="password" className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none text-left" dir="ltr" placeholder="••••••••" />
+          </div>
+          
+          <button onClick={onLogin} className="w-full bg-primary-600 text-white py-3 rounded-lg font-bold hover:bg-primary-700 transition-colors shadow-lg shadow-primary-500/30">
+            دخول
+          </button>
+          
+          <div className="relative py-4">
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200 dark:border-gray-700"></div></div>
+            <div className="relative flex justify-center text-sm"><span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">أو</span></div>
+          </div>
 
-        <button onClick={onGuest} className="w-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 py-3 rounded-lg font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-          تصفح كزائر
-        </button>
+          <button onClick={onGuest} className="w-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 py-3 rounded-lg font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+            تصفح كزائر
+          </button>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 interface BranchCardProps {
   branch: Branch;
   onReport: (b: Branch) => void;
 }
 
-const BranchCard: React.FC<BranchCardProps> = ({ branch, onReport }) => {
+const BranchCard = ({ branch, onReport }: BranchCardProps) => {
   const [expanded, setExpanded] = useState(false);
   const [hovered, setHovered] = useState(false);
 
@@ -186,7 +248,13 @@ const BranchCard: React.FC<BranchCardProps> = ({ branch, onReport }) => {
   );
 };
 
-const AddDataScreen = ({ banks, onAddBank, onAddBranch }: { banks: Bank[], onAddBank: (b: Bank) => void, onAddBranch: (b: Branch) => void }) => {
+interface AddDataScreenProps {
+  banks: Bank[];
+  onAddBank: (b: Bank) => void;
+  onAddBranch: (b: Branch) => void;
+}
+
+const AddDataScreen = ({ banks, onAddBank, onAddBranch }: AddDataScreenProps) => {
   const [activeTab, setActiveTab] = useState<'BANK' | 'BRANCH'>('BANK');
   
   // Bank Form State
@@ -347,7 +415,13 @@ const AddDataScreen = ({ banks, onAddBank, onAddBranch }: { banks: Bank[], onAdd
   );
 };
 
-const ReportModal = ({ branch, onClose, onSubmit }: any) => {
+interface ReportModalProps {
+  branch: Branch | null;
+  onClose: () => void;
+  onSubmit: (id: string, status: LiquidityStatus) => void;
+}
+
+const ReportModal = ({ branch, onClose, onSubmit }: ReportModalProps) => {
   if (!branch) return null;
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
@@ -377,7 +451,7 @@ const ReportModal = ({ branch, onClose, onSubmit }: any) => {
 
 // --- Main App Component ---
 
-const App: React.FC = () => {
+const App = () => {
   const [view, setView] = useState<ViewState>('SPLASH');
   const [selectedBank, setSelectedBank] = useState<Bank | null>(null);
   
@@ -457,7 +531,7 @@ const App: React.FC = () => {
   const toggleFavorite = (e: React.MouseEvent, bankId: string) => {
     e.stopPropagation();
     setFavoriteBanks(prev => {
-      const newSet = new Set(prev);
+      const newSet = new Set(Array.from(prev));
       if (newSet.has(bankId)) {
         newSet.delete(bankId);
       } else {
@@ -473,7 +547,6 @@ const App: React.FC = () => {
     ));
     setReportBranch(null);
     setNotification({ message: 'تم تحديث الحالة بنجاح، شكراً لمساهمتك!', type: 'success' });
-    // In a real app, this would send to Firebase
   };
 
   // Logic for adding data
@@ -540,7 +613,7 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col font-sans transition-colors relative">
       <Header 
-        title={view === 'BANK_DETAILS' ? selectedBank?.name : (view === 'MAP' ? 'خريطة الفروع' : (view === 'ADD_DATA' ? 'إضافة بيانات' : 'دليلي المصرفي'))}
+        title={view === 'BANK_DETAILS' ? selectedBank?.name || '' : (view === 'MAP' ? 'خريطة الفروع' : (view === 'ADD_DATA' ? 'إضافة بيانات' : 'دليلي المصرفي'))}
         showBack={view !== 'HOME'}
         onBack={handleBack}
         onViewMap={setView}
@@ -550,10 +623,10 @@ const App: React.FC = () => {
         toggleTheme={toggleTheme}
       />
 
-      <main className="flex-1 max-w-4xl mx-auto w-full p-4 pb-24 md:pb-4">
+      <main className="flex-1 max-w-4xl mx-auto w-full p-4 pb-28 md:pb-4">
         
         {view === 'HOME' && (
-          <>
+          <div className="animate-in fade-in duration-300">
             {/* Tabs */}
             <div className="flex p-1 bg-gray-200 dark:bg-gray-700 rounded-xl mb-6">
               <button
@@ -663,7 +736,7 @@ const App: React.FC = () => {
                 )}
               </div>
             )}
-          </>
+          </div>
         )}
 
         {view === 'ADD_DATA' && (
@@ -678,7 +751,7 @@ const App: React.FC = () => {
         )}
 
         {view === 'BANK_DETAILS' && (
-          <div className="space-y-6">
+          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             
             {/* AI Insight Section */}
             <div className="bg-gradient-to-r from-primary-50 to-primary-100 dark:from-primary-900/30 dark:to-primary-800/20 rounded-xl p-5 border border-primary-200 dark:border-primary-800/50">
@@ -704,7 +777,7 @@ const App: React.FC = () => {
               ) : (
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   {isAnalyzing 
-                    ? 'يقوم النظام الآن بتحليل بيانات الفروع لتقديم أفضل نصيحة لك...' 
+                    ? 'يقوم النظام الآن بتحليل البيانات الفروع لتقديم أفضل نصيحة لك...' 
                     : `اضغط على زر التحليل للحصول على ملخص ذكي لحالة السيولة في فروع ${selectedBank?.name}.`
                   }
                 </p>
@@ -737,7 +810,7 @@ const App: React.FC = () => {
         )}
 
         {view === 'MAP' && (
-           <div className="space-y-4">
+           <div className="space-y-4 animate-in zoom-in-95 duration-300">
              <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-colors">
                <h2 className="font-bold mb-2 text-gray-900 dark:text-white">توزيع الفروع وحالة السيولة</h2>
                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">خريطة توضيحية للفروع (بيانات تجريبية)</p>
@@ -790,49 +863,7 @@ const App: React.FC = () => {
       )}
 
       {/* Mobile Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-gray-800/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 pb-safe pt-2 px-6 flex justify-between items-center md:hidden z-50 transition-all duration-300 shadow-[0_-5px_20px_-5px_rgba(0,0,0,0.1)]">
-        <button 
-          onClick={() => { setView('HOME'); setSelectedBank(null); }} 
-          className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all duration-300 ${
-            view === 'HOME' || view === 'BANK_DETAILS'
-              ? 'text-primary-600 dark:text-primary-400 -translate-y-2' 
-              : 'text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-          }`}
-        >
-          <div className={`p-1.5 rounded-full transition-all ${view === 'HOME' || view === 'BANK_DETAILS' ? 'bg-primary-50 dark:bg-primary-900/30 ring-4 ring-white dark:ring-gray-800 shadow-sm' : ''}`}>
-            <IconBank className={`w-6 h-6 transition-transform ${view === 'HOME' || view === 'BANK_DETAILS' ? 'scale-110' : ''}`} />
-          </div>
-          <span className="text-[10px] font-bold">المصارف</span>
-        </button>
-
-        <button 
-          onClick={() => setView('MAP')} 
-          className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all duration-300 ${
-            view === 'MAP'
-              ? 'text-primary-600 dark:text-primary-400 -translate-y-2' 
-              : 'text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-          }`}
-        >
-          <div className={`p-1.5 rounded-full transition-all ${view === 'MAP' ? 'bg-primary-50 dark:bg-primary-900/30 ring-4 ring-white dark:ring-gray-800 shadow-sm' : ''}`}>
-            <IconMapPin className={`w-6 h-6 transition-transform ${view === 'MAP' ? 'scale-110' : ''}`} />
-          </div>
-          <span className="text-[10px] font-bold">الخريطة</span>
-        </button>
-
-        <button 
-          onClick={() => setView('ADD_DATA')} 
-          className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all duration-300 ${
-            view === 'ADD_DATA' 
-              ? 'text-primary-600 dark:text-primary-400 -translate-y-2' 
-              : 'text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-          }`}
-        >
-          <div className={`p-1.5 rounded-full transition-all ${view === 'ADD_DATA' ? 'bg-primary-50 dark:bg-primary-900/30 ring-4 ring-white dark:ring-gray-800 shadow-sm' : ''}`}>
-            <IconPlus className={`w-6 h-6 transition-transform ${view === 'ADD_DATA' ? 'scale-110' : ''}`} />
-          </div>
-          <span className="text-[10px] font-bold">إضافة</span>
-        </button>
-      </div>
+      <BottomNav view={view} setView={setView} onResetSelection={() => setSelectedBank(null)} />
     </div>
   );
 };
